@@ -17,13 +17,16 @@
 *.mcs
 *.prm
 
+# Competition deliverables
+!FPGA/Reports/
+!FPGA/Reports/*.rpt
+
 **/.Xil/
 **/*.cache/
 **/*.runs/
 **/*.hw/
 **/*.sim/
 **/*.ip_user_files/
-**/Reports/
 
 # Simulator and synthesis temporary files
 transcript
