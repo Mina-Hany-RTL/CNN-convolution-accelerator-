@@ -1,0 +1,38 @@
+Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2018.2 (win64) Build 2258646 Thu Jun 14 20:03:12 MDT 2018
+| Date         : Thu Sep 17 05:01:09 2026
+| Host         : LAPTOP-Q35FEN5U running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file {D:/IEEE Competition/FPGA/Reports/utilization_hierarchical.rpt}
+| Design       : Top_accelerator
+| Device       : 7z020clg400-1
+| Design State : Routed
+------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++---------------------+-------------------------+------------+------------+---------+------+-----+--------+--------+--------------+
+|       Instance      |          Module         | Total LUTs | Logic LUTs | LUTRAMs | SRLs | FFs | RAMB36 | RAMB18 | DSP48 Blocks |
++---------------------+-------------------------+------------+------------+---------+------+-----+--------+--------+--------------+
+| Top_accelerator     |                   (top) |        235 |        209 |       0 |   26 | 279 |      0 |      0 |            9 |
+|   (Top_accelerator) |                   (top) |          0 |          0 |       0 |    0 |   0 |      0 |      0 |            0 |
+|   u_Data_Router     |             Data_Router |         16 |          0 |       0 |   16 |  72 |      0 |      0 |            0 |
+|     LB1             |             Line_Buffer |          8 |          0 |       0 |    8 |   0 |      0 |      0 |            0 |
+|     LB2             |           Line_Buffer_0 |          8 |          0 |       0 |    8 |   0 |      0 |      0 |            0 |
+|     win             |        Window_Generator |          0 |          0 |       0 |    0 |  72 |      0 |      0 |            0 |
+|   u_FSM             |             Control_FSM |         60 |         58 |       0 |    2 |  48 |      0 |      0 |            0 |
+|   u_Formatter       | data_formatter_and_ReLU |         16 |         16 |       0 |    0 |   0 |      0 |      0 |            0 |
+|   u_MAC_array       |               MAC_array |        143 |        135 |       0 |    8 | 159 |      0 |      0 |            9 |
+|     u_adder_tree    |              adder_tree |        143 |        135 |       0 |    8 | 159 |      0 |      0 |            0 |
+|     u_multipliers   |    parallel_multipliers |          4 |          4 |       0 |    0 |   0 |      0 |      0 |            9 |
++---------------------+-------------------------+------------+------------+---------+------+-----+--------+--------+--------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+
