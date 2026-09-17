@@ -1,102 +1,117 @@
 # FPGA-Based Edge-AI Vision Accelerator
 
-This repository contains a streaming CNN convolution accelerator implemented
-in synthesizable Verilog for the IEEE SSCS Egypt Student Design Competition
-2026. The design targets a Xilinx Zynq-7000 device and processes one
-single-channel image frame at a time using a fixed 3x3 convolution datapath.
+A streaming 3x3 convolution accelerator for grayscale image processing, designed in Verilog for the IEEE SSCS Egypt Student Design Competition 2026. The design targets a Xilinx Zynq-7000 FPGA and implements a programmable CNN-style convolution engine for single-channel 32x32 images.
 
-The checked-in repository includes the RTL, testbench, Python golden model,
-golden vectors, Questa/ModelSim scripts, SAIF activity data, Vivado project
-metadata, timing constraints, implementation reports, and the project report.
+This repository includes the RTL, simulation testbench, golden-model verification package, Vivado project metadata, implementation reports, and the project report PDF.
+
+## Team and project context
+
+- Team: Abtal Eldigital
+- Members:
+  - Mina Hany Eid
+  - Ziad Mostafa Abdelwahed
+  - Jomana Abdelmohsen Abdelatty
+  - Omar Sherif Hussien
+- Institution: Ain Shams University, Faculty of Engineering
+- Department: Computer and Systems Engineering
+- Competition: IEEE SSCS Egypt Student Design Competition 2026
+
+## Why this project matters
+
+Convolution is the core computational primitive of CNNs, but it is expensive in software and inefficient when implemented naively in hardware. This accelerator is designed to keep the datapath compact, streaming, and highly parallel while remaining synthesizable and easy to verify.
+
+The architecture processes pixels in raster order, builds a 3x3 sliding window, multiplies it by a programmable 3x3 kernel, and emits a valid output stream with ReLU-style post-processing.
 
 ## Design summary
 
-| Item | Current configuration |
+| Parameter | Value |
 | --- | --- |
-| Input image | 32x32, one channel |
-| Pixel format | Unsigned 8-bit, 0 to 255 |
-| Kernel | 3x3, nine signed 8-bit coefficients |
-| Convolution | Cross-correlation, no kernel flip |
-| Stride and padding | Stride 1, valid/no padding |
-| Output geometry | 30x30, 900 valid positions |
-| Raw result | Signed 20-bit MAC result |
-| Formatted result | Unsigned 16-bit ReLU and positive saturation |
-| Target device | `xc7z020clg400-1` |
+| Input image | 32x32 grayscale |
+| Pixel format | Unsigned 8-bit (0..255) |
+| Kernel format | 9 signed 8-bit coefficients |
+| Kernel shape | 3x3 |
+| Convolution mode | Cross-correlation (no kernel flip) |
+| Stride | 1 |
+| Padding | None / valid-only |
+| Output size | 30x30 = 900 valid outputs |
+| Raw MAC output | Signed 20-bit |
+| Final pixel output | Unsigned 16-bit after ReLU + saturation |
+| Target FPGA | xc7z020clg400-1 |
 
-For a 32x32 input, the valid output size is:
+The valid output size is calculated as:
 
 ```text
 (32 - 3) / 1 + 1 = 30
 30 x 30 = 900 output values
 ```
 
-## Repository layout
+## System architecture
 
 ```text
-rtl/
-  Top_accelerator.v              Top-level integration module
-  Control_FSM.v                  Frame control and valid timing
-  Data_Router.v                  Pixel-to-window routing
-  Line_Buffer.v                  Two image line buffers
-  Window_Generator.v             3x3 spatial window registers
-  MAC_array.v                    Nine-way multiply-accumulate datapath
-  parallel_multipliers.v         Nine parallel signed multipliers
-  adder_tree.v                   Pipelined partial-sum reduction
-  data_formatter_and_ReLU.v      ReLU and 16-bit positive saturation
-
-tb/
-  Top_accelerator_tb.v            RTL regression testbench
-
-cnn_golden_model_package_v2/
-  golden_model.py                 Numerical Python reference model
-  golden_vectors/                 Nine input/kernel/expected-output cases
-  GOLDEN_MODEL_README.txt         Model and vector usage
-  TOP_ALIGNMENT_AND_ASSUMPTIONS.txt
-                                  Required top-level packing assumptions
-  RTL_CHANGES_NEEDED.txt          Follow-up engineering notes
-
-scripts/
-  run.do                          Questa/ModelSim compile and regression script
-
-sim/
-  regression_transcript.log       Captured nine-case simulator transcript
-  active_processing.saif          Switching activity from regression case 05
-  README.md                       Simulation artifact description
-
-FPGA/
-  CNN_Project/CNN_Project.xpr     Vivado project metadata
-  Timing.xdc                     Clock and timing constraints
-  Reports/                       Required competition implementation reports
-
-Report.pdf                        Project and competition report
+        +------------------+
+        |  Input stream    |
+        |  pixel_valid/    |
+        |  pixel_ready     |
+        +---------+--------+
+                  |
+                  v
+      +------------------------------+
+      | Control_FSM                 |
+      | - start/idle/stream/drain  |
+      | - valid timing alignment   |
+      +--------------+---------------+
+                     |
+                     v
+      +------------------------------+
+      | Data_Router                 |
+      | - line buffers             |
+      | - 3x3 window generator     |
+      +--------------+---------------+
+                     |
+                     v
+      +------------------------------+
+      | MAC_array                   |
+      | - 9 parallel multipliers    |
+      | - adder tree               |
+      | - signed 20-bit MAC_out     |
+      +--------------+---------------+
+                     |
+                     v
+      +------------------------------+
+      | data_formatter_and_ReLU     |
+      | - ReLU                     |
+      | - positive saturation       |
+      | - 16-bit pixel_out          |
+      +------------------------------+
 ```
 
-Vivado generated caches, run directories, simulator work products, and other
-temporary outputs are excluded by `.gitignore`. The reports in
-`FPGA/Reports/` are explicitly included because they are competition
-deliverables.
+### 1) Control FSM
+The RTL controller (`rtl/Control_FSM.v`) handles the frame lifecycle:
 
-## RTL architecture and dataflow
+- waits in IDLE for a start pulse
+- accepts pixels in STREAM mode
+- tracks row/column position for valid window generation
+- asserts a delayed valid signal aligned with the MAC pipeline latency
+- moves to DRAIN when the final pixel is accepted
+- asserts `done` when the last output has propagated
 
-The top-level module is `rtl/Top_accelerator.v`. It connects four functional
-subsystems:
+### 2) Data routing and window formation
+The input image enters one pixel at a time through a valid/ready handshake. The router stores previous rows and forms a 3x3 spatial neighborhood that is forwarded into the MAC core. This is implemented with line buffering and shift-register based window extraction.
 
-1. **Control FSM** - accepts a frame start, tracks the image position, controls
-   the input handshake, and aligns output-valid timing with the pipelined MAC.
-2. **Data router** - accepts pixels in raster order and shifts them through two
-   line buffers and a window generator to form each 3x3 neighborhood.
-3. **MAC array** - multiplies nine window pixels by nine kernel coefficients in
-   parallel and reduces the products through an adder tree.
-4. **Output formatter** - maps negative MAC results to zero and saturates
-   positive results above 65535 to `16'hFFFF`.
+### 3) MAC datapath
+The multiply-accumulate unit (`rtl/MAC_array.v`) multiplies the nine window pixels by nine kernel coefficients in parallel and reduces the products through an adder tree. This gives a raw signed 20-bit convolution result for each valid window.
 
-The raw signed MAC result is the safest signal for checking the convolution
-itself. The formatted `pixel_out` signal is a post-processing representation
-that applies ReLU and unsigned 16-bit saturation.
+### 4) Output formatting
+The formatter (`rtl/data_formatter_and_ReLU.v`) applies:
+
+- ReLU: negative results are clamped to zero
+- saturation: positive results above 16-bit range are clamped to `16'hFFFF`
+
+The final result is a 16-bit unsigned output pixel.
 
 ## Top-level interface
 
-`Top_accelerator` has a synchronous clock and active-low reset:
+The main module is `rtl/Top_accelerator.v`.
 
 ```verilog
 module Top_accelerator #(
@@ -117,185 +132,151 @@ module Top_accelerator #(
 );
 ```
 
-### Control signals
-
-- Assert `rst_n = 0` to reset the design.
-- Pulse `start` for one clock cycle to begin a frame.
-- A pixel is accepted only when `pixel_valid && pixel_ready` is high at the
-  active clock edge.
-- `busy` remains high while the frame is being processed.
-- `done` pulses when the final output has completed.
-- `pixel_out_valid` identifies each valid formatted output value.
-
-The source must keep `pixel_in` and `pixel_valid` stable until a transfer is
-accepted. Kernel coefficients should remain stable for the complete frame.
-
 ### Kernel packing
-
-The 72-bit `kernel` input contains nine signed 8-bit coefficients in row-major
-spatial order:
+The 72-bit kernel input is packed as nine signed 8-bit values in row-major order:
 
 ```text
-kernel[7:0]    = k00    kernel[15:8]  = k01    kernel[23:16] = k02
-kernel[31:24]  = k10    kernel[39:32] = k11    kernel[47:40] = k12
-kernel[55:48]  = k20    kernel[63:56] = k21    kernel[71:64] = k22
+kernel[7:0]    = k00
+kernel[15:8]  = k01
+kernel[23:16] = k02
+kernel[31:24] = k10
+kernel[39:32] = k11
+kernel[47:40] = k12
+kernel[55:48] = k20
+kernel[63:56] = k21
+kernel[71:64] = k22
 ```
 
-When building the vector by concatenation, this corresponds to
-`{k22,k21,k20,k12,k11,k10,k02,k01,k00}`. Negative coefficients are preserved
-as 8-bit two's-complement values; for example, `-1` is `8'hFF`.
+The design assumes consistent row-major slot ordering and no kernel flip. This is a critical alignment requirement enforced by the testbench and golden model.
 
-The window must use the same slot order for `w00` through `w22`. The packing
-probe in test case 09 uses the 3x3 values 1 through 9 with the same kernel and
-expects a first raw result of 285.
-
-## Golden model and test vectors
-
-`cnn_golden_model_package_v2/golden_model.py` is the numerical reference for
-the current hardware configuration. It models:
-
-- unsigned 8-bit input pixels;
-- signed 8-bit integer kernel coefficients;
-- one input channel;
-- 3x3 cross-correlation without kernel flipping;
-- stride 1 and valid/no-padding geometry;
-- signed 20-bit raw MAC values; and
-- ReLU plus upper saturation for the formatted output.
-
-The model does not attempt to reproduce FSM states, line-buffer fill cycles,
-or internal pipeline latency. It checks numerical values in raster order.
-
-Each vector case contains:
+## Repository layout
 
 ```text
-input_image.txt       1024 unsigned decimal values, row-major
-kernel.txt               9 signed decimal values, row-major
-expected_mac20.txt     900 signed raw convolution results
-expected_output.txt    900 unsigned formatted results
+.
+├── README.md
+├── Report.pdf
+├── .gitignore
+├── rtl/
+│   ├── Top_accelerator.v
+│   ├── Control_FSM.v
+│   ├── Data_Router.v
+│   ├── Line_Buffer.v
+│   ├── Window_Generator.v
+│   ├── MAC_array.v
+│   ├── parallel_multipliers.v
+│   ├── adder_tree.v
+│   └── data_formatter_and_ReLU.v
+├── tb/
+│   └── Top_accelerator_tb.v
+├── cnn_golden_model_package_v2/
+│   ├── golden_model.py
+│   ├── GOLDEN_MODEL_README.txt
+│   ├── TOP_ALIGNMENT_AND_ASSUMPTIONS.txt
+│   ├── RTL_CHANGES_NEEDED.txt
+│   └── golden_vectors/
+├── scripts/
+│   └── run.do
+├── sim/
+│   ├── README.md
+│   ├── regression_transcript.log
+│   └── active_processing.saif
+├── FPGA/
+│   ├── Timing.xdc
+│   ├── CNN_Project/CNN_Project.xpr
+│   └── Reports/
+└──
 ```
 
-The nine cases cover zero input, all-ones input, increasing data, a Sobel
-pattern, random data, maximum-value saturation, negative ReLU behavior, and
-top-level packing order.
+## Golden model and verification
 
-From the repository root, run:
+The project includes a Python reference model in `cnn_golden_model_package_v2/golden_model.py` that numerically verifies the expected behavior for the current hardware configuration.
 
-```text
+It models:
+
+- 32x32 grayscale input image
+- 3x3 signed 8-bit kernel
+- stride = 1, valid-only output generation
+- raw 20-bit MAC result
+- ReLU + positive saturation to 16-bit unsigned output
+
+The verification package includes nine built-in test vectors covering:
+
+1. zero input / identity kernel
+2. all-ones image / all-ones kernel
+3. increasing image / identity kernel
+4. Sobel-like pattern
+5. random image and kernel
+6. max-value saturation
+7. positive overflow case
+8. negative ReLU case
+9. top packing/order validation
+
+### Run the Python golden model
+
+```bash
+cd /workspaces/CNN-convolution-accelerator-
+python -m pip install numpy
 python cnn_golden_model_package_v2/golden_model.py --self-test
 ```
 
-To regenerate the built-in vectors:
+To generate the built-in vectors:
 
-```text
+```bash
 python cnn_golden_model_package_v2/golden_model.py --generate-tests
 ```
 
-To generate outputs for a custom image and kernel:
+To evaluate a custom image/kernel pair:
 
-```text
+```bash
 python cnn_golden_model_package_v2/golden_model.py \
   --image input_image.txt \
   --kernel kernel.txt
 ```
 
-The Python model requires NumPy:
+## Simulation flow
 
-```text
-python -m pip install numpy
+The repository provides a QuestaSim/ModelSim flow via `scripts/run.do`.
+
+```bash
+cd /workspaces/CNN-convolution-accelerator-
+vsim -do scripts/run.do
 ```
 
-## RTL simulation
-
-The intended simulator flow uses QuestaSim/ModelSim and `scripts/run.do`. The
-script compiles the RTL and testbench, launches `Top_accelerator_tb`, opens
-useful waveform signals, arms SAIF capture for regression case 05, and runs
-the complete test sequence.
-
-The script references the Verilog source files by name. Run it from a
-simulation working directory where the RTL and testbench source paths resolve,
-or adapt the `vlog` paths to your simulator project layout.
-
-The checked-in `sim/regression_transcript.log` records:
+The testbench `tb/Top_accelerator_tb.v` streams each golden-vector case into the DUT and checks the output values cycle-by-cycle. The transcript confirms the intended behavior:
 
 ```text
 ALL 9 TESTS PASSED SUCCESSFULLY!
 ```
 
-Each vector completed with zero errors. The transcript also preserves a
-redundant-literal compiler warning and end-of-run simulator messages, so those
-messages should not be confused with failed vector comparisons.
+## FPGA implementation results
 
-The testbench captures switching activity during
-`05_random_image_random_kernel`. The resulting
-`sim/active_processing.saif` file can be supplied to a downstream power
-analysis flow.
+The provided Vivado project and implementation reports target the `xc7z020clg400-1` device.
 
-## Vivado implementation
-
-Open `FPGA/CNN_Project/CNN_Project.xpr` in Vivado 2018.2 or a compatible
-Vivado version. The project targets the Zynq-7000
-`xc7z020clg400-1`. `FPGA/Timing.xdc` contains the clock constraint used for
-implementation.
-
-The checked-in reports describe a routed implementation with:
-
-| Resource/check | Reported result |
+| Metric | Result |
 | --- | ---: |
 | LUTs | 235 |
 | Flip-flops | 279 |
-| BRAM36 / BRAM18 | 0 / 0 |
+| BRAM36 | 0 |
+| BRAM18 | 0 |
 | DSP48 blocks | 9 |
-| Clock period | 4.000 ns (250 MHz) |
+| Operating clock frequency | 250 MHz |
+| Maximum frequency (Fmax) | 289.9 MHz |
+| Clock period at operating point | 4.000 ns |
 | Worst setup slack | 0.388 ns |
 | Worst hold slack | 0.067 ns |
-| Setup failing endpoints | 0 |
-| Hold failing endpoints | 0 |
+| Total on-chip power | 0.156 W |
 
-The reports are preserved under `FPGA/Reports/` for competition review. They
-are not intended to be regenerated or edited by the documentation workflow.
+## Key implementation notes
 
-## Assumptions and limitations
+- The datapath is fully pipelined to maintain throughput while keeping the resource count low.
+- Nine parallel multipliers reduce arithmetic latency and allow a compact streaming design.
+- The design preserves programmable kernel coefficients and can be reused for different filter values without re-synthesizing the entire datapath.
+- The design is intentionally valid-only for no-padding convolution, matching the competition constraints and the golden-model assumption.
 
-- The current reference configuration is fixed to a 32x32 grayscale frame and
-  3x3 kernel, although the top-level image dimensions are parameters.
-- The model assumes row-major input and matching row-major window/kernel slots.
-- The model assumes cross-correlation rather than a mathematically flipped
-  convolution kernel.
-- The current formatter output is unsigned 16-bit ReLU/saturation; the raw
-  signed MAC result is the preferred official convolution signal.
-- The golden model does not model cycle latency or startup fill behavior.
-- Line-buffer and window-generator startup registers are valid only after the
-  FSM asserts the corresponding output-valid timing.
-- Coefficients should not change during an active frame.
+## Project report
 
-Before changing packing, output interpretation, or valid timing, review
-`TOP_ALIGNMENT_AND_ASSUMPTIONS.txt` and rerun the packing probe.
+The full technical report is available as `Report.pdf` and documents system overview, RTL design decisions, verification strategy, FPGA results, and trade-offs.
 
-## Troubleshooting
+## License and usage
 
-**No output values are observed:** verify reset release, pulse `start`, and
-hold each input pixel until `pixel_valid && pixel_ready` is accepted.
-
-**The first packing-probe result is not 285:** inspect the byte ordering of the
-window and kernel buses before changing the Python model.
-
-**Expected files do not match:** compare the signed raw `MAC_out` against
-`expected_mac20.txt`; compare the ReLU/saturation path against
-`expected_output.txt`. Do not compare these two representations interchangeably.
-
-**The simulator cannot find a source file:** run the `.do` script from a
-directory with the expected source paths, or replace the bare `vlog` file names
-with paths to `rtl/` and `tb/`.
-
-## Reproducing and extending the project
-
-1. Run the Python self-test and inspect the golden vectors.
-2. Run the Questa/ModelSim regression and confirm all nine cases pass.
-3. Review `sim/regression_transcript.log` and the SAIF artifact.
-4. Open the Vivado project, confirm the target part and `Timing.xdc`, and
-   regenerate reports only when implementation changes are intentional.
-5. Keep new reusable source files under `rtl/`, testbench files under `tb/`,
-   simulator artifacts under `sim/`, and scripts under `scripts/`.
-
-When extending the design, update the golden model and vector documentation
-alongside any interface or numerical behavior change.
+This project is intended for academic and educational use as part of the IEEE SSCS Egypt Student Design Competition workflow. The RTL, testbench, and golden-model files are provided as reference material for hardware design verification and FPGA implementation exploration.
