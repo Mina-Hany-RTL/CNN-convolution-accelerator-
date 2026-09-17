@@ -1,0 +1,69 @@
+RTL ITEMS TO FIX / CONFIRM LATER
+================================
+
+These RTL files are NOT modified in this ZIP. This list is for the team to fix
+in the design repository.
+
+REQUIRED / STRONGLY RECOMMENDED
+-------------------------------
+
+1. adder_tree.v
+   The uploaded file is missing the final:
+
+       endmodule
+
+   Add it before compilation.
+
+2. MAC_array(2).v wrapper
+   The wrapper currently has:
+
+       output reg signed [19:0] MAC_out;
+       reg signed [143:0] temp_reg;
+
+   Those signals are driven by child-module output ports, not by always blocks in
+   the wrapper. In plain Verilog, make them nets:
+
+       output wire signed [19:0] MAC_out;
+       wire signed [143:0] temp_reg;
+
+3. parallel_multipliers file name
+   The uploaded file is named "parallel_multipliers" with no .v extension.
+   Rename it to:
+
+       parallel_multipliers.v
+
+   Otherwise commands such as "vlog *.v" will silently skip it.
+
+4. Official output vs ReLU output
+   Competition requires at least signed 16-bit output precision. Current core
+   MAC_out is signed [19:0], which fits that requirement. Current formatter gives
+   unsigned [15:0] pixel_out after ReLU/saturation.
+
+   Safest architecture/reporting choice:
+       - expose signed [19:0] MAC_out as the core/official convolution output;
+       - expose unsigned [15:0] pixel_out as optional ReLU post-processing.
+
+TOP-LEVEL INTEGRATION ITEMS
+---------------------------
+
+5. Top_Accelerator must pack image_pixels[71:0] and kernel[71:0] exactly as
+   documented in TOP_ALIGNMENT_AND_ASSUMPTIONS.txt, or the golden model must be
+   changed to match the actual packing.
+
+6. Top must keep kernel values stable while a frame is being processed unless
+   coefficient changes during a frame are intentionally designed and verified.
+
+7. Top must route Control_FSM.router_en to Data_Router.valid_in (or otherwise use
+   the exact same accepted-pixel event) to preserve synchronization on stalls.
+
+NOT REQUIRED FOR FUNCTIONAL CORRECTNESS RIGHT NOW
+-------------------------------------------------
+
+8. Line_Buffer, Window_Generator, and adder_tree have no reset.
+    Their internal registers can start as X in simulation, but valid gating masks
+    startup garbage until meaningful outputs are produced. You may leave this as
+    is unless your synthesis/debug strategy requires explicit reset.
+
+9. data_formatter_and_ReLU is combinational, so it adds no extra valid-pipeline
+    cycle. If it is later changed to a clocked block, Control_FSM/output-valid
+    timing must be revisited.
