@@ -1,0 +1,180 @@
+# Reading pref.tcl
+# //  Questa Sim-64
+# //  Version 2021.1 win64 Jan 19 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Project file D:/IEEE Competition/src/CNN_Accelerator.mpf was not found.
+# Unable to open project.
+# Loading project CNN
+do run.do
+# ** Warning: (vlib-34) Library already exists at "work".
+# Errors: 0, Warnings: 1
+# QuestaSim-64 vmap 2021.1 Lib Mapping Utility 2021.01 Jan 19 2021
+# vmap work work 
+# Modifying D:/IEEE Competition/rtl/CNN.mpf
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 data_formatter_and_ReLU.v 
+# -- Compiling module data_formatter_and_ReLU
+# ** Warning: data_formatter_and_ReLU.v(20): (vlog-2600) [RDGN] - Redundant digits in numeric literal.
+# 
+# Top level modules:
+# 	data_formatter_and_ReLU
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 1
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 Control_FSM.v 
+# -- Compiling module Control_FSM
+# 
+# Top level modules:
+# 	Control_FSM
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 Window_Generator.v 
+# -- Compiling module Window_Generator
+# 
+# Top level modules:
+# 	Window_Generator
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 Line_Buffer.v 
+# -- Compiling module Line_Buffer
+# 
+# Top level modules:
+# 	Line_Buffer
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 Data_Router.v 
+# -- Compiling module Data_Router
+# 
+# Top level modules:
+# 	Data_Router
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 parallel_multipliers.v 
+# -- Compiling module parallel_multipliers
+# 
+# Top level modules:
+# 	parallel_multipliers
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 adder_tree.v 
+# -- Compiling module adder_tree
+# 
+# Top level modules:
+# 	adder_tree
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 MAC_array.v 
+# -- Compiling module MAC_array
+# 
+# Top level modules:
+# 	MAC_array
+# End time: 06:03:37 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:37 on Sep 17,2026
+# vlog -reportprogress 300 Top_accelerator.v 
+# -- Compiling module Top_accelerator
+# 
+# Top level modules:
+# 	Top_accelerator
+# End time: 06:03:38 on Sep 17,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2021.1 Compiler 2021.01 Jan 19 2021
+# Start time: 06:03:38 on Sep 17,2026
+# vlog -reportprogress 300 Top_accelerator_tb.v 
+# -- Compiling module Top_accelerator_tb
+# 
+# Top level modules:
+# 	Top_accelerator_tb
+# End time: 06:03:38 on Sep 17,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim -voptargs="+acc" work.Top_accelerator_tb 
+# Start time: 06:03:38 on Sep 17,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Note: (vopt-143) Recognized 1 FSM in module "Control_FSM(fast)".
+# Loading work.Top_accelerator_tb(fast)
+# Loading work.Top_accelerator(fast)
+# Loading work.Control_FSM(fast)
+# Loading work.Data_Router(fast)
+# Loading work.Line_Buffer(fast)
+# Loading work.Window_Generator(fast)
+# Loading work.MAC_array(fast)
+# Loading work.parallel_multipliers(fast)
+# Loading work.adder_tree(fast)
+# Loading work.data_formatter_and_ReLU(fast)
+# .main_pane.wave.interior.cs.body.pw.wf
+# .main_pane.structure.interior.cs.body.struct
+# .main_pane.objects.interior.cs.body.tree
+# 0
+# 0
+# 0
+# Running test: cnn_golden_model_package_v2/golden_vectors/01_zero_image_identity
+# Completed cnn_golden_model_package_v2/golden_vectors/01_zero_image_identity with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/02_one_image_all_ones_kernel
+# Completed cnn_golden_model_package_v2/golden_vectors/02_one_image_all_ones_kernel with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/03_increasing_image_identity
+# Completed cnn_golden_model_package_v2/golden_vectors/03_increasing_image_identity with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/04_pattern_image_sobel_x
+# Completed cnn_golden_model_package_v2/golden_vectors/04_pattern_image_sobel_x with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/05_random_image_random_kernel
+# Power tracking started at  (test 5, start #5)
+# SAIF written at 
+# Completed cnn_golden_model_package_v2/golden_vectors/05_random_image_random_kernel with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/06_max255_image_identity
+# Completed cnn_golden_model_package_v2/golden_vectors/06_max255_image_identity with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/07_max255_positive_saturation
+# Completed cnn_golden_model_package_v2/golden_vectors/07_max255_positive_saturation with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/08_max255_negative_relu
+# Completed cnn_golden_model_package_v2/golden_vectors/08_max255_negative_relu with 0 errors.
+# 
+# Running test: cnn_golden_model_package_v2/golden_vectors/09_top_packing_order_probe
+# Completed cnn_golden_model_package_v2/golden_vectors/09_top_packing_order_probe with 0 errors.
+# 
+# ========================================
+# ALL 9 TESTS PASSED SUCCESSFULLY!
+# ========================================
+# ** Note: $stop    : Top_accelerator_tb.v(222)
+#    Time: 93335 ns  Iteration: 1  Instance: /Top_accelerator_tb
+# Break in Module Top_accelerator_tb at Top_accelerator_tb.v line 222
+# A time value could not be extracted from the current line
+# ** Error: ?????????
+# 
+#        Unable to replace existing ini file (D:/IEEE Competition/rtl/CNN.mpf).  File can not be renamed.
+# ** Error: ?????????
+# 
+#        Unable to replace existing ini file (D:/IEEE Competition/rtl/CNN.mpf).  File can not be renamed.
+# ** Error: ?????????
+# 
+#        Unable to replace existing ini file (D:/IEEE Competition/rtl/CNN.mpf).  File can not be renamed.
