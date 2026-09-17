@@ -1,0 +1,119 @@
+GOLDEN MODEL ASSUMPTIONS + TOP_ACCELERATOR ALIGNMENT CHECKLIST
+==============================================================
+
+A. Assumptions used by the golden model
+---------------------------------------
+1. Test image size is 32x32.
+2. Pixels are unsigned 8-bit values in the range 0..255.
+3. There is one input channel (grayscale / single-channel feature map).
+4. The implemented datapath is fixed to a 3x3 spatial kernel.
+5. Kernel coefficients are signed 8-bit two's-complement values (-128..127).
+6. Kernel coefficients are integer/fixed-point values with NO fractional
+   rescaling after multiplication because the supplied RTL contains no shift.
+7. Stride is 1.
+8. Padding is none / valid convolution.
+9. Output geometry is therefore 30x30 = 900 outputs for a 32x32 input.
+10. Input pixels arrive in row-major raster order.
+11. The core operation is assumed to be CNN-style cross-correlation (no kernel
+    flip), because matching image/kernel multiplier slots are assumed to
+    represent matching 3x3 matrix positions.
+12. The raw result is signed 20-bit MAC_out.
+13. data_formatter_and_ReLU is modeled exactly as:
+       MAC < 0      -> 0
+       0..65535     -> unchanged
+       MAC > 65535  -> 65535
+14. There is no rounding, no fractional-bit shift, and no wraparound in the
+    final formatter path.
+15. The golden model does NOT model FSM timing, line-buffer fill cycles, or MAC
+    pipeline latency; it models numerical outputs and raster order.
+
+B. Top_Accelerator must align with these assumptions
+----------------------------------------------------
+1. Pack the 3x3 window in row-major order so multiplier slots are:
+
+       image_pixels[7:0]   = w00
+       image_pixels[15:8]  = w01
+       image_pixels[23:16] = w02
+       image_pixels[31:24] = w10
+       image_pixels[39:32] = w11
+       image_pixels[47:40] = w12
+       image_pixels[55:48] = w20
+       image_pixels[63:56] = w21
+       image_pixels[71:64] = w22
+
+   A correct concatenation for that mapping is:
+
+       assign image_pixels = {
+           w22, w21, w20,
+           w12, w11, w10,
+           w02, w01, w00
+       };
+
+2. Pack the kernel in the SAME positional order:
+
+       kernel[7:0]   = k00
+       kernel[15:8]  = k01
+       kernel[23:16] = k02
+       kernel[31:24] = k10
+       kernel[39:32] = k11
+       kernel[47:40] = k12
+       kernel[55:48] = k20
+       kernel[63:56] = k21
+       kernel[71:64] = k22
+
+   If assembling from individual bytes, the equivalent concatenation is:
+
+       {k22,k21,k20,k12,k11,k10,k02,k01,k00}
+
+3. Do NOT reverse/flip the kernel in Top. The golden model does not flip it.
+
+4. Preserve kernel two's-complement bytes exactly. For example -1 must occupy
+   an 8-bit slot as 8'hFF.
+
+5. Feed input pixels in row-major order:
+
+       (0,0), (0,1), ... (0,31), (1,0), ... (31,31)
+
+6. Data_Router.valid_in should be driven by the same accepted-pixel event used
+   by Control_FSM (router_en / pixel_valid && pixel_ready), so line buffers and
+   FSM coordinates never drift during source stalls.
+
+7. Use Image_Width = 32 in Data_Router/Line_Buffer for the current configuration
+   unless those parameters are later removed and hardcoded to 32.
+
+8. Keep the 3x3 kernel constant for an entire frame unless the RTL is explicitly
+   redesigned to support coefficient changes while processing.
+
+9. Compare raw MAC_out only when mac_out_valid = 1. Exactly 900 valid raw outputs
+   are expected for a complete 32x32 frame.
+
+10. data_formatter_and_ReLU is combinational. If Top does not register its output,
+    pixel_out should be checked on the same mac_out_valid cycles as MAC_out.
+
+11. Treat raw signed [19:0] MAC_out as the safest official convolution output.
+    The current ReLU formatter output is unsigned [15:0], so it is better treated
+    as the optional ReLU/post-processing output unless the team changes the
+    official output interface.
+
+C. Quick packing probe
+----------------------
+Use golden_vectors/09_top_packing_order_probe.
+
+Its first 3x3 input window is:
+
+    1 2 3
+    4 5 6
+    7 8 9
+
+and its kernel is:
+
+    1 2 3
+    4 5 6
+    7 8 9
+
+With the intended row-major/no-flip mapping, the first raw result is:
+
+    1^2 + 2^2 + ... + 9^2 = 285
+
+If RTL does not produce 285 for the first valid MAC result, investigate Top-level
+packing/order before altering the golden model.

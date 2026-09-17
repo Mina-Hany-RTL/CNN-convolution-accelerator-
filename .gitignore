@@ -1,0 +1,45 @@
+# Vivado generated files
+*.jou
+*.log
+*.str
+*.dcp
+*.rpt
+*.rpx
+*.wdb
+*.wcfg
+*.pb
+*.wdf
+*.xsim
+*.vcd
+*.ltx
+*.bit
+*.bin
+*.mcs
+*.prm
+
+**/.Xil/
+**/*.cache/
+**/*.runs/
+**/*.hw/
+**/*.sim/
+**/*.ip_user_files/
+**/Reports/
+
+# Simulator and synthesis temporary files
+transcript
+vsim.wlf
+work/
+questa/
+modelsim.ini
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+*.swp
